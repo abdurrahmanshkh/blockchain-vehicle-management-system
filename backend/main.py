@@ -1,26 +1,31 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from web3 import Web3
+from pymongo import MongoClient
+import requests
 import json
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(
     title="Vehicle Lifecycle Management API",
-    description="Backend API to interact with the Ethereum Blockchain for Vehicle Tracking.",
-    version="1.0.0"
+    description="Backend API to interact with Ethereum, IPFS, and MongoDB.",
+    version="1.1.0"
 )
 
-# Enable CORS so our React frontend can talk to this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict this to the frontend URL
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ==========================================
-# 1. BLOCKCHAIN CONFIGURATION
+# 1. CONFIGURATIONS
 # ==========================================
 # Replace this with the address from Step 3!
 CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
@@ -36,14 +41,25 @@ try:
     with open(ARTIFACT_PATH, "r") as f:
         artifact = json.load(f)
         CONTRACT_ABI = artifact["abi"]
-except FileNotFoundError:
-    raise Exception("ABI file not found. Ensure you compiled the contract in Step 2.")
+    if w3.is_connected():
+        contract = w3.eth.contract(address=w3.to_checksum_address(CONTRACT_ADDRESS), abi=CONTRACT_ABI)
+except Exception as e:
+    print(f"Blockchain setup error: {e}")
 
-# Initialize the contract instance
-if w3.is_connected():
-    contract = w3.eth.contract(address=w3.to_checksum_address(CONTRACT_ADDRESS), abi=CONTRACT_ABI)
-else:
-    print("WARNING: Web3 is not connected to the Hardhat node.")
+# --- MONGODB ---
+MONGO_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+DB_NAME = os.getenv("DATABASE_NAME", "VehicleLifecycleDB")
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client[DB_NAME]
+vehicles_collection = db["vehicles"]
+
+# --- PINATA (IPFS) ---
+PINATA_JWT = os.getenv("PINATA_JWT")
+PINATA_API_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS"
+
+headers = {
+    "Authorization": f"Bearer {PINATA_JWT}"
+}
 
 # ==========================================
 # 2. API ENDPOINTS
@@ -51,21 +67,54 @@ else:
 
 @app.get("/")
 def read_root():
-    """Health check endpoint"""
     return {
         "status": "Backend is active", 
-        "blockchain_connected": w3.is_connected()
+        "blockchain_connected": w3.is_connected(),
+        "mongodb_connected": "VehicleLifecycleDB" in mongo_client.list_database_names()
     }
 
-@app.get("/api/vehicle/{vin}")
-def get_vehicle_details(vin: str):
-    """Fetch core vehicle details directly from the blockchain."""
+# --- IPFS ENDPOINT ---
+@app.post("/api/upload")
+async def upload_file_to_ipfs(file: UploadFile = File(...)):
+    """Uploads a file to IPFS via Pinata and returns the CID (Hash)."""
+    if not PINATA_JWT or PINATA_JWT == "YOUR_PINATA_JWT_HERE":
+        raise HTTPException(status_code=500, detail="Pinata JWT not configured in .env")
+
     try:
-        # Call the Solidity getter function
-        vehicle_data = contract.functions.getVehicleDetails(vin).call()
+        # Read file contents into memory
+        file_content = await file.read()
         
-        # vehicle_data returns a tuple. We map it to a readable dictionary based on our Solidity Struct.
-        return {
+        # Prepare the file for the Pinata API
+        files = {
+            'file': (file.filename, file_content)
+        }
+        
+        # Send POST request to Pinata
+        response = requests.post(PINATA_API_URL, files=files, headers=headers)
+        
+        if response.status_code == 200:
+            ipfs_hash = response.json()["IpfsHash"]
+            return {"message": "File uploaded successfully", "ipfsHash": ipfs_hash}
+        else:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+# --- BLOCKCHAIN TO MONGODB SYNC ENDPOINT ---
+@app.post("/api/sync/{vin}")
+def sync_vehicle_to_db(vin: str):
+    """
+    Fetches the latest vehicle data and history from the blockchain 
+    and caches it in MongoDB for lightning-fast frontend reads.
+    """
+    try:
+        # 1. Fetch from Blockchain
+        vehicle_data = contract.functions.getVehicleDetails(vin).call()
+        history_data = contract.functions.getVehicleHistory(vin).call()
+        
+        # 2. Format Vehicle Data
+        vehicle_dict = {
             "vin": vehicle_data[0],
             "make": vehicle_data[1],
             "model": vehicle_data[2],
@@ -73,16 +122,8 @@ def get_vehicle_details(vin: str):
             "currentOwner": vehicle_data[4],
             "isRegistered": vehicle_data[5]
         }
-    except Exception as e:
-        # If the vehicle isn't registered, Solidity throws an error. We catch it here.
-        raise HTTPException(status_code=404, detail="Vehicle not found or not registered.")
-
-@app.get("/api/vehicle/{vin}/history")
-def get_vehicle_history(vin: str):
-    """Fetch the array of lifecycle records (Service, Accidents) from the blockchain."""
-    try:
-        history_data = contract.functions.getVehicleHistory(vin).call()
         
+        # 3. Format History Data
         formatted_history = []
         for record in history_data:
             formatted_history.append({
@@ -93,6 +134,26 @@ def get_vehicle_history(vin: str):
                 "description": record[4]
             })
             
-        return formatted_history
+        vehicle_dict["history"] = formatted_history
+
+        # 4. Save/Update MongoDB Cache
+        # Use upsert=True to insert if it doesn't exist, or update if it does
+        vehicles_collection.update_one(
+            {"vin": vin}, 
+            {"$set": vehicle_dict}, 
+            upsert=True
+        )
+        
+        return {"message": f"Vehicle {vin} successfully synced to MongoDB."}
+
     except Exception as e:
-        raise HTTPException(status_code=404, detail="Vehicle history not found.")
+        raise HTTPException(status_code=500, detail=f"Failed to sync vehicle: {str(e)}")
+
+# --- CACHED READ ENDPOINT ---
+@app.get("/api/vehicle/{vin}")
+def get_vehicle(vin: str):
+    """Fetches vehicle data instantly from the MongoDB Cache."""
+    vehicle = vehicles_collection.find_one({"vin": vin}, {"_id": 0}) # Exclude Mongo's internal _id
+    if vehicle:
+        return vehicle
+    raise HTTPException(status_code=404, detail="Vehicle not found in cache. Ensure it has been synced.")

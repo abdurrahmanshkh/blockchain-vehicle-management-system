@@ -1,6 +1,8 @@
-import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
-export default buildModule("VehicleRegistryModule", (m) => {
+module.exports = buildModule("VehicleRegistryModule", (m) => {
+  // Tells Hardhat to deploy the "VehicleRegistry" contract we compiled in Step 2
   const vehicleRegistry = m.contract("VehicleRegistry");
+
   return { vehicleRegistry };
 });

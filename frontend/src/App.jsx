@@ -209,11 +209,11 @@ function App() {
         </div>
 
         {/* SEARCH DASHBOARD */}
-        <div className="bg-gray-800 p-6 rounded-lg shadow-md text-white border-t-4 border-gray-400">
+        <div className="bg-white p-6 rounded-lg shadow-md text-black border-t-4 border-gray-400">
           <h2 className="text-xl font-bold mb-4 border-b border-gray-600 pb-2">🔍 Public Verification</h2>
           <div className="flex space-x-2 mb-4">
             <input type="text" placeholder="Enter VIN..." value={searchVin} onChange={(e) => setSearchVin(e.target.value)} className="flex-1 border p-2 rounded text-black" />
-            <button onClick={fetchVehicle} className="bg-gray-600 px-4 py-2 rounded hover:bg-gray-500">Search</button>
+            <button onClick={fetchVehicle} className="bg-gray-600 px-4 py-2 rounded hover:bg-gray-500 text-white">Search</button>
           </div>
 
           {vehicleData && (

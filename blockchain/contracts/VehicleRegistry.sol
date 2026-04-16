@@ -5,7 +5,8 @@ contract VehicleRegistry {
     // ==========================================
     // 1. STATE VARIABLES & ROLES
     // ==========================================
-    address public adminRTO;
+    // SLITHER FIX: Added 'immutable' keyword to save gas
+    address public immutable adminRTO;
 
     mapping(address => bool) public authorizedServiceCenters;
     mapping(address => bool) public authorizedInsuranceCos;
@@ -14,7 +15,7 @@ contract VehicleRegistry {
     // 2. DATA STRUCTURES
     // ==========================================
     struct Vehicle {
-        string vin;          // Vehicle Identification Number
+        string vin;          
         string make;
         string model;
         uint16 year;
@@ -23,37 +24,35 @@ contract VehicleRegistry {
     }
 
     struct Record {
-        string recordType;   // e.g., "Service", "Accident"
-        string ipfsHash;     // Link to the document/image on IPFS
-        uint256 date;        // Timestamp
-        address provider;    // Who uploaded it (Service Center / Insurance)
-        string description;  // Short text summary
+        string recordType;   
+        string ipfsHash;     
+        uint256 date;        
+        address provider;    
+        string description;  
     }
 
-    // Mapping VIN to Vehicle details
     mapping(string => Vehicle) private vehicles;
-    
-    // Mapping VIN to an array of lifecycle records
     mapping(string => Record[]) private vehicleRecords;
 
     // ==========================================
-    // 3. EVENTS (For the frontend to listen to)
+    // 3. EVENTS
     // ==========================================
-    event VehicleRegistered(string vin, address owner);
-    event OwnershipTransferred(string vin, address oldOwner, address newOwner);
+    // SLITHER FIX: Added 'indexed' to address parameters for faster log searching
+    event VehicleRegistered(string vin, address indexed owner);
+    event OwnershipTransferred(string vin, address indexed oldOwner, address indexed newOwner);
     event RecordAdded(string vin, string recordType, string ipfsHash);
-    event EntityAuthorized(address entity, string role);
+    event EntityAuthorized(address indexed entity, string role);
 
     // ==========================================
-    // 4. MODIFIERS (Access Control)
+    // 4. MODIFIERS
     // ==========================================
     modifier onlyRTO() {
         require(msg.sender == adminRTO, "Only RTO can perform this action");
         _;
     }
 
-    modifier onlyVehicleOwner(string memory _vin) {
-        require(vehicles[_vin].currentOwner == msg.sender, "Only the vehicle owner can perform this action");
+    modifier onlyVehicleOwner(string memory vin) {
+        require(vehicles[vin].currentOwner == msg.sender, "Only the vehicle owner can perform this action");
         _;
     }
 
@@ -61,96 +60,91 @@ contract VehicleRegistry {
     // 5. CONSTRUCTOR
     // ==========================================
     constructor() {
-        // The account that deploys the contract becomes the RTO Admin
         adminRTO = msg.sender;
     }
 
     // ==========================================
     // 6. ROLE MANAGEMENT FUNCTIONS
     // ==========================================
-    function authorizeServiceCenter(address _serviceCenter) public onlyRTO {
-        authorizedServiceCenters[_serviceCenter] = true;
-        emit EntityAuthorized(_serviceCenter, "ServiceCenter");
+    // SLITHER FIX: Removed underscores from parameters
+    function authorizeServiceCenter(address serviceCenter) public onlyRTO {
+        authorizedServiceCenters[serviceCenter] = true;
+        emit EntityAuthorized(serviceCenter, "ServiceCenter");
     }
 
-    function authorizeInsuranceCompany(address _insuranceCo) public onlyRTO {
-        authorizedInsuranceCos[_insuranceCo] = true;
-        emit EntityAuthorized(_insuranceCo, "InsuranceCompany");
+    function authorizeInsuranceCompany(address insuranceCo) public onlyRTO {
+        authorizedInsuranceCos[insuranceCo] = true;
+        emit EntityAuthorized(insuranceCo, "InsuranceCompany");
     }
 
     // ==========================================
     // 7. CORE BUSINESS LOGIC
     // ==========================================
-    
-    // RTO registers a new vehicle
-    function registerVehicle(string memory _vin, string memory _make, string memory _model, uint16 _year, address _initialOwner) public onlyRTO {
-        require(!vehicles[_vin].isRegistered, "Vehicle already registered");
+    function registerVehicle(string memory vin, string memory make, string memory model, uint16 year, address initialOwner) public onlyRTO {
+        require(!vehicles[vin].isRegistered, "Vehicle already registered");
 
-        vehicles[_vin] = Vehicle({
-            vin: _vin,
-            make: _make,
-            model: _model,
-            year: _year,
-            currentOwner: _initialOwner,
+        vehicles[vin] = Vehicle({
+            vin: vin,
+            make: make,
+            model: model,
+            year: year,
+            currentOwner: initialOwner,
             isRegistered: true
         });
 
-        emit VehicleRegistered(_vin, _initialOwner);
+        emit VehicleRegistered(vin, initialOwner);
     }
 
-    // Owner transfers vehicle to a buyer
-    function transferOwnership(string memory _vin, address _newOwner) public onlyVehicleOwner(_vin) {
-        require(vehicles[_vin].isRegistered, "Vehicle not registered");
-        require(_newOwner != address(0), "Invalid new owner address");
+    function transferOwnership(string memory vin, address newOwner) public onlyVehicleOwner(vin) {
+        require(vehicles[vin].isRegistered, "Vehicle not registered");
+        require(newOwner != address(0), "Invalid new owner address");
 
-        address oldOwner = vehicles[_vin].currentOwner;
-        vehicles[_vin].currentOwner = _newOwner;
+        address oldOwner = vehicles[vin].currentOwner;
+        vehicles[vin].currentOwner = newOwner;
 
-        emit OwnershipTransferred(_vin, oldOwner, _newOwner);
+        emit OwnershipTransferred(vin, oldOwner, newOwner);
     }
 
-    // Service Center adds a maintenance record (IPFS Hash)
-    function addServiceRecord(string memory _vin, string memory _ipfsHash, string memory _description) public {
+    function addServiceRecord(string memory vin, string memory ipfsHash, string memory description) public {
         require(authorizedServiceCenters[msg.sender], "Not an authorized Service Center");
-        require(vehicles[_vin].isRegistered, "Vehicle not registered");
+        require(vehicles[vin].isRegistered, "Vehicle not registered");
 
-        vehicleRecords[_vin].push(Record({
+        vehicleRecords[vin].push(Record({
             recordType: "Service",
-            ipfsHash: _ipfsHash,
+            ipfsHash: ipfsHash,
             date: block.timestamp,
             provider: msg.sender,
-            description: _description
+            description: description
         }));
 
-        emit RecordAdded(_vin, "Service", _ipfsHash);
+        emit RecordAdded(vin, "Service", ipfsHash);
     }
 
-    // Insurance Company adds an accident record (IPFS Hash)
-    function addAccidentRecord(string memory _vin, string memory _ipfsHash, string memory _description) public {
+    function addAccidentRecord(string memory vin, string memory ipfsHash, string memory description) public {
         require(authorizedInsuranceCos[msg.sender], "Not an authorized Insurance Company");
-        require(vehicles[_vin].isRegistered, "Vehicle not registered");
+        require(vehicles[vin].isRegistered, "Vehicle not registered");
 
-        vehicleRecords[_vin].push(Record({
+        vehicleRecords[vin].push(Record({
             recordType: "Accident",
-            ipfsHash: _ipfsHash,
+            ipfsHash: ipfsHash,
             date: block.timestamp,
             provider: msg.sender,
-            description: _description
+            description: description
         }));
 
-        emit RecordAdded(_vin, "Accident", _ipfsHash);
+        emit RecordAdded(vin, "Accident", ipfsHash);
     }
 
     // ==========================================
-    // 8. GETTER FUNCTIONS (Read-only)
+    // 8. GETTER FUNCTIONS 
     // ==========================================
-    function getVehicleDetails(string memory _vin) public view returns (Vehicle memory) {
-        require(vehicles[_vin].isRegistered, "Vehicle not registered");
-        return vehicles[_vin];
+    function getVehicleDetails(string memory vin) public view returns (Vehicle memory) {
+        require(vehicles[vin].isRegistered, "Vehicle not registered");
+        return vehicles[vin];
     }
 
-    function getVehicleHistory(string memory _vin) public view returns (Record[] memory) {
-        require(vehicles[_vin].isRegistered, "Vehicle not registered");
-        return vehicleRecords[_vin];
+    function getVehicleHistory(string memory vin) public view returns (Record[] memory) {
+        require(vehicles[vin].isRegistered, "Vehicle not registered");
+        return vehicleRecords[vin];
     }
 }

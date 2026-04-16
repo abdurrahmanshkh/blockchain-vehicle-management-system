@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from web3 import Web3
 from pymongo import MongoClient
 import requests
@@ -52,6 +53,7 @@ DB_NAME = os.getenv("DATABASE_NAME", "VehicleLifecycleDB")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 vehicles_collection = db["vehicles"]
+users_collection = db["users"]
 
 # --- PINATA (IPFS) ---
 PINATA_JWT = os.getenv("PINATA_JWT")
@@ -62,7 +64,14 @@ headers = {
 }
 
 # ==========================================
-# 2. API ENDPOINTS
+# 2. MODELS
+# ==========================================
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+# ==========================================
+# 3. API ENDPOINTS
 # ==========================================
 
 @app.get("/")
@@ -72,6 +81,18 @@ def read_root():
         "blockchain_connected": w3.is_connected(),
         "mongodb_connected": "VehicleLifecycleDB" in mongo_client.list_database_names()
     }
+
+# --- AUTH ENDPOINT ---
+@app.post("/api/login")
+def login(req: LoginRequest):
+    """Authenticates a user against the MongoDB users collection."""
+    user = users_collection.find_one(
+        {"username": req.username, "password": req.password},
+        {"_id": 0}  # Exclude Mongo's internal _id
+    )
+    if user:
+        return user
+    raise HTTPException(status_code=401, detail="Invalid credentials")
 
 # --- IPFS ENDPOINT ---
 @app.post("/api/upload")

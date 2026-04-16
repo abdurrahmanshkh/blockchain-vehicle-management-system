@@ -1,25 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import PublicSearch from './PublicSearch';
 
-function ServiceDashboard({ contract, loading, setLoading }) {
+const API = 'http://127.0.0.1:8000';
+
+function ServiceDashboard({ contract, loading, setLoading, user, addToast }) {
   const [scVin, setScVin] = useState('');
   const [scDesc, setScDesc] = useState('');
   const [scFile, setScFile] = useState(null);
+  const [isAuthorized, setIsAuthorized] = useState(null); // null = checking
+
+  // Check authorization status on mount
+  useEffect(() => {
+    checkAuthorization();
+  }, [contract, user]);
+
+  const checkAuthorization = async () => {
+    if (!contract || !user?.walletAddress) {
+      setIsAuthorized(null);
+      return;
+    }
+    try {
+      const result = await contract.authorizedServiceCenters(user.walletAddress);
+      setIsAuthorized(result);
+    } catch (err) {
+      console.error('Auth check failed:', err);
+      setIsAuthorized(null);
+    }
+  };
 
   const syncDatabase = async (targetVin) => {
-    await axios.post(`http://127.0.0.1:8000/api/sync/${targetVin}`);
+    await axios.post(`${API}/api/sync/${targetVin}`);
   };
 
   const addServiceRecord = async (e) => {
     e.preventDefault();
-    if (!contract || !scFile) return alert("Connect wallet and select a file!");
+    if (!contract || !scFile) return addToast('Connect wallet and select a file!', 'warning');
     setLoading(true);
     try {
       // 1. Upload to IPFS via FastAPI
       const formData = new FormData();
       formData.append("file", scFile);
-      const uploadRes = await axios.post("http://127.0.0.1:8000/api/upload", formData, {
+      const uploadRes = await axios.post(`${API}/api/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       const ipfsHash = uploadRes.data.ipfsHash;
@@ -30,11 +52,11 @@ function ServiceDashboard({ contract, loading, setLoading }) {
 
       // 3. Sync Database
       await syncDatabase(scVin);
-      alert("Service Record Uploaded to IPFS & Blockchain!");
+      addToast(`Service record for ${scVin} uploaded to IPFS & recorded on blockchain!`, 'success');
       setScVin(''); setScDesc(''); setScFile(null);
     } catch (err) {
       console.error(err);
-      alert("Failed to upload. Are you an authorized Service Center?");
+      addToast('Failed to upload. Are you an authorized Service Center?', 'error');
     } finally {
       setLoading(false);
     }
@@ -42,6 +64,37 @@ function ServiceDashboard({ contract, loading, setLoading }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Authorization Status Banner */}
+      {isAuthorized !== null && (
+        <div className={`mb-6 px-5 py-3 rounded-xl border flex items-center gap-3 ${
+          isAuthorized
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
+          {isAuthorized ? (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold">Authorized Service Center</p>
+                <p className="text-xs opacity-75">You are authorized to add service records to the blockchain.</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold">Not Yet Authorized</p>
+                <p className="text-xs opacity-75">Contact the RTO Admin to authorize your service center before uploading records.</p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Service Center Dashboard</h1>
@@ -107,10 +160,10 @@ function ServiceDashboard({ contract, loading, setLoading }) {
             </div>
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl shadow-sm hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 transition-all duration-200"
+              disabled={loading || isAuthorized === false}
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl shadow-sm hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              {loading ? 'Uploading & Recording...' : 'Upload Record to Blockchain'}
+              {loading ? 'Uploading & Recording...' : isAuthorized === false ? 'Not Authorized' : 'Upload Record to Blockchain'}
             </button>
           </form>
         </div>
@@ -162,7 +215,7 @@ function ServiceDashboard({ contract, loading, setLoading }) {
 
         {/* Public Search — full width */}
         <div className="lg:col-span-2">
-          <PublicSearch />
+          <PublicSearch addToast={addToast} />
         </div>
       </div>
     </div>

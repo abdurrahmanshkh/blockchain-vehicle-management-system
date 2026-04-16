@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-function PublicSearch() {
+const API = 'http://127.0.0.1:8000';
+
+function PublicSearch({ addToast }) {
   const [searchVin, setSearchVin] = useState('');
   const [vehicleData, setVehicleData] = useState(null);
   const [searched, setSearched] = useState(false);
@@ -12,10 +14,11 @@ function PublicSearch() {
     setLoading(true);
     setSearched(true);
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/vehicle/${searchVin}`);
+      const response = await axios.get(`${API}/api/vehicle/${searchVin}`);
       setVehicleData(response.data);
     } catch (error) {
       setVehicleData(null);
+      if (addToast) addToast('Vehicle not found in database. Ensure it has been synced.', 'warning');
     } finally {
       setLoading(false);
     }

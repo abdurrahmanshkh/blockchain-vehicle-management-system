@@ -6,8 +6,9 @@ const ROLE_CONFIG = {
   USER: { label: 'Vehicle Owner', color: 'bg-violet-100 text-violet-800 border-violet-200' },
 };
 
-function Navbar({ user, account, onConnectWallet, onLogout }) {
+function Navbar({ user, account, onConnectWallet, onSwitchWallet, onLogout }) {
   const roleConfig = ROLE_CONFIG[user.role] || ROLE_CONFIG.USER;
+  const displayLabel = user.displayName || user.username;
 
   const walletMismatch = account && user.walletAddress &&
     account.toLowerCase() !== user.walletAddress.toLowerCase();
@@ -32,17 +33,28 @@ function Navbar({ user, account, onConnectWallet, onLogout }) {
               {roleConfig.label}
             </span>
             <span className="text-sm text-gray-600 hidden sm:block">
-              Logged in as <span className="font-semibold text-gray-900">{user.username}</span>
+              <span className="font-semibold text-gray-900">{displayLabel}</span>
             </span>
           </div>
 
-          {/* Right — Wallet + Logout */}
-          <div className="flex items-center gap-3">
+          {/* Right — Wallet + Actions */}
+          <div className="flex items-center gap-2">
             {account ? (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono text-gray-600">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                {account.substring(0, 6)}...{account.substring(38)}
-              </span>
+              <div className="hidden sm:flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono text-gray-600">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  {account.substring(0, 6)}...{account.substring(38)}
+                </span>
+                <button
+                  onClick={onSwitchWallet}
+                  className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  title="Switch Wallet"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                </button>
+              </div>
             ) : (
               <button
                 onClick={onConnectWallet}
@@ -72,13 +84,21 @@ function Navbar({ user, account, onConnectWallet, onLogout }) {
       {/* Wallet Mismatch Warning Banner */}
       {walletMismatch && (
         <div className="bg-amber-50 border-t border-amber-200 px-4 py-2.5">
-          <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-amber-800">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>
-              <strong>Wallet mismatch!</strong> Your MetaMask address (<code className="font-mono text-xs">{account.substring(0, 8)}...</code>) does not match your registered address (<code className="font-mono text-xs">{user.walletAddress.substring(0, 8)}...</code>). Please switch to the correct account in MetaMask.
-            </span>
+          <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-amber-800">
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>
+                <strong>Wallet mismatch!</strong> MetaMask (<code className="font-mono text-xs">{account.substring(0, 8)}...</code>) doesn't match your registered address (<code className="font-mono text-xs">{user.walletAddress.substring(0, 8)}...</code>).
+              </span>
+            </div>
+            <button
+              onClick={onSwitchWallet}
+              className="shrink-0 ml-4 px-3 py-1 text-xs font-semibold bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg transition-colors duration-200"
+            >
+              Switch Wallet
+            </button>
           </div>
         </div>
       )}

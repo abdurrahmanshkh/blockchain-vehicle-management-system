@@ -178,3 +178,30 @@ def get_vehicle(vin: str):
     if vehicle:
         return vehicle
     raise HTTPException(status_code=404, detail="Vehicle not found in cache. Ensure it has been synced.")
+
+# --- USER LISTING ENDPOINT ---
+@app.get("/api/users")
+def get_users(role: str = None):
+    """Returns a list of users, optionally filtered by role. Excludes passwords."""
+    query = {}
+    if role:
+        query["role"] = role.upper()
+    users = list(users_collection.find(query, {"_id": 0, "password": 0}))
+    return users
+
+# --- VEHICLES BY OWNER ENDPOINT ---
+@app.get("/api/vehicles/owner/{wallet_address}")
+def get_vehicles_by_owner(wallet_address: str):
+    """Returns all vehicles owned by a specific wallet address from the MongoDB cache."""
+    vehicles = list(vehicles_collection.find(
+        {"currentOwner": {"$regex": f"^{wallet_address}$", "$options": "i"}},
+        {"_id": 0}
+    ))
+    return vehicles
+
+# --- ALL VEHICLES ENDPOINT ---
+@app.get("/api/vehicles/all")
+def get_all_vehicles():
+    """Returns all registered vehicles from the MongoDB cache. Used by RTO dashboard."""
+    vehicles = list(vehicles_collection.find({}, {"_id": 0}))
+    return vehicles

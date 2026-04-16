@@ -5,12 +5,19 @@ import Navbar from './components/Navbar';
 import RTODashboard from './components/RTODashboard';
 import ServiceDashboard from './components/ServiceDashboard';
 import UserDashboard from './components/UserDashboard';
+import ToastContainer from './components/Toast';
 
 function App() {
   const [user, setUser] = useState(null);
   const [account, setAccount] = useState('');
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = (message, type = 'success') => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -24,6 +31,37 @@ function App() {
     }
   }, []);
 
+  // Auto-connect wallet when user is set and wallet isn't connected yet
+  useEffect(() => {
+    if (user && !account) {
+      // Try to silently connect if MetaMask was previously authorized
+      if (window.ethereum) {
+        window.ethereum.request({ method: 'eth_accounts' }).then((accounts) => {
+          if (accounts.length > 0) {
+            connectWallet();
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [user]);
+
+  // Listen for MetaMask account changes
+  useEffect(() => {
+    if (window.ethereum) {
+      const handleAccountsChanged = (accounts) => {
+        if (accounts.length > 0) {
+          // Re-connect with new account
+          connectWallet();
+        } else {
+          setAccount('');
+          setContract(null);
+        }
+      };
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      return () => window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+    }
+  }, []);
+
   // Connect MetaMask
   const connectWallet = async () => {
     try {
@@ -32,6 +70,24 @@ function App() {
       setContract(contract);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  // Switch wallet — prompts MetaMask to show account picker
+  const switchWallet = async () => {
+    try {
+      if (window.ethereum) {
+        await window.ethereum.request({
+          method: 'wallet_requestPermissions',
+          params: [{ eth_accounts: {} }],
+        });
+        const { address, contract } = await getBlockchainContext();
+        setAccount(address);
+        setContract(contract);
+        addToast(`Switched to wallet ${address.substring(0, 6)}...${address.substring(38)}`);
+      }
+    } catch (error) {
+      console.error('Wallet switch cancelled or failed:', error);
     }
   };
 
@@ -51,13 +107,14 @@ function App() {
 
   // Render the correct dashboard based on role
   const renderDashboard = () => {
+    const dashboardProps = { contract, loading, setLoading, user, addToast };
     switch (user.role) {
       case 'RTO':
-        return <RTODashboard contract={contract} loading={loading} setLoading={setLoading} />;
+        return <RTODashboard {...dashboardProps} />;
       case 'SERVICE':
-        return <ServiceDashboard contract={contract} loading={loading} setLoading={setLoading} />;
+        return <ServiceDashboard {...dashboardProps} />;
       case 'USER':
-        return <UserDashboard contract={contract} loading={loading} setLoading={setLoading} />;
+        return <UserDashboard {...dashboardProps} />;
       default:
         return <p className="text-center text-red-500 mt-10">Unknown role: {user.role}</p>;
     }
@@ -75,9 +132,11 @@ function App() {
         user={user}
         account={account}
         onConnectWallet={connectWallet}
+        onSwitchWallet={switchWallet}
         onLogout={handleLogout}
       />
       {renderDashboard()}
+      <ToastContainer toasts={toasts} setToasts={setToasts} />
     </div>
   );
 }

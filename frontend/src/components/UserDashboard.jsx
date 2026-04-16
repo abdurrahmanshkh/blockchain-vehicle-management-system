@@ -124,9 +124,18 @@ function UserDashboard({ contract, loading, setLoading, user, addToast }) {
                       <h3 className="text-sm font-bold text-gray-900">{v.make} {v.model}</h3>
                       <p className="text-xs text-gray-500">{v.year}</p>
                     </div>
-                    <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">
-                      {v.history?.length || 0} records
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-semibold rounded-full">
+                        {v.history?.length || 0} records
+                      </span>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-md border ${
+                        (v.ownerCount || 1) === 1 
+                          ? 'bg-blue-50 text-blue-600 border-blue-100' 
+                          : 'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                        {(v.ownerCount || 1) === 1 ? '1st Owner' : (v.ownerCount || 1) === 2 ? '2nd Owner' : (v.ownerCount || 1) === 3 ? '3rd Owner' : `${v.ownerCount}th Owner`}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-xs font-mono text-gray-400 mb-3">VIN: {v.vin}</p>
                   <button

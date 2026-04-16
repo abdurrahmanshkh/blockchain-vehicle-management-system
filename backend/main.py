@@ -126,11 +126,11 @@ async def upload_file_to_ipfs(file: UploadFile = File(...)):
 @app.post("/api/sync/{vin}")
 def sync_vehicle_to_db(vin: str):
     """
-    Fetches the latest vehicle data and history from the blockchain 
-    and caches it in MongoDB for lightning-fast frontend reads.
+    Fetches latest vehicle data, service/accident history, and complete 
+    ownership transfer chain from blockchain and caches in MongoDB.
     """
     try:
-        # 1. Fetch from Blockchain
+        # 1. Fetch from Blockchain (Metadata and History Records)
         vehicle_data = contract.functions.getVehicleDetails(vin).call()
         history_data = contract.functions.getVehicleHistory(vin).call()
         
@@ -144,7 +144,7 @@ def sync_vehicle_to_db(vin: str):
             "isRegistered": vehicle_data[5]
         }
         
-        # 3. Format History Data
+        # 3. Format History Data (Service/Accident)
         formatted_history = []
         for record in history_data:
             formatted_history.append({
@@ -154,18 +154,63 @@ def sync_vehicle_to_db(vin: str):
                 "provider": record[3],
                 "description": record[4]
             })
-            
         vehicle_dict["history"] = formatted_history
 
-        # 4. Save/Update MongoDB Cache
-        # Use upsert=True to insert if it doesn't exist, or update if it does
+        # 4. Build Ownership History from On-Chain Events
+        # --- Fetch VehicleRegistered (The Birth of the Vehicle) ---
+        reg_logs = contract.events.VehicleRegistered().get_logs(
+            from_block=0, 
+            to_block="latest", 
+            argument_filters={"vin": vin}
+        )
+
+        ownership_history = []
+        for log in reg_logs:
+            block = w3.eth.get_block(log["blockNumber"])
+            ownership_history.append({
+                "event": "Registration",
+                "from": None,
+                "to": log["args"]["owner"],
+                "timestamp": block["timestamp"],
+                "txHash": log["transactionHash"].hex(),
+                "blockNumber": log["blockNumber"]
+            })
+
+        # --- Fetch OwnershipTransferred (All Subsequent Sales) ---
+        transfer_logs = contract.events.OwnershipTransferred().get_logs(
+            from_block=0, 
+            to_block="latest", 
+            argument_filters={"vin": vin}
+        )
+
+        for log in transfer_logs:
+            block = w3.eth.get_block(log["blockNumber"])
+            ownership_history.append({
+                "event": "Transfer",
+                "from": log["args"]["oldOwner"],
+                "to": log["args"]["newOwner"],
+                "timestamp": block["timestamp"],
+                "txHash": log["transactionHash"].hex(),
+                "blockNumber": log["blockNumber"]
+            })
+
+        # Sort chronologically by block number
+        ownership_history.sort(key=lambda x: x["blockNumber"])
+        
+        vehicle_dict["ownershipHistory"] = ownership_history
+        vehicle_dict["ownerCount"] = len(ownership_history)
+
+        # 5. Save/Update MongoDB Cache
         vehicles_collection.update_one(
             {"vin": vin}, 
             {"$set": vehicle_dict}, 
             upsert=True
         )
         
-        return {"message": f"Vehicle {vin} successfully synced to MongoDB."}
+        return {
+            "message": f"Vehicle {vin} synced successfully.",
+            "ownerCount": vehicle_dict["ownerCount"]
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to sync vehicle: {str(e)}")

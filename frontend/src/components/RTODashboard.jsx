@@ -242,6 +242,7 @@ function RTODashboard({ contract, loading, setLoading, user, addToast }) {
                       <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle</th>
                       <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Year</th>
                       <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Owner</th>
+                      <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Owners</th>
                       <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Records</th>
                     </tr>
                   </thead>
@@ -252,6 +253,15 @@ function RTODashboard({ contract, loading, setLoading, user, addToast }) {
                         <td className="py-2.5 px-3 text-gray-900 font-medium">{v.make} {v.model}</td>
                         <td className="py-2.5 px-3 text-gray-600">{v.year}</td>
                         <td className="py-2.5 px-3 text-gray-600">{getOwnerName(v.currentOwner)}</td>
+                        <td className="py-2.5 px-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            (v.ownerCount || 1) > 1 
+                              ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                              : 'bg-blue-100 text-blue-700 border border-blue-200'
+                          }`}>
+                            {(v.ownerCount || 1)} { (v.ownerCount || 1) === 1 ? 'Owner' : 'Owners' }
+                          </span>
+                        </td>
                         <td className="py-2.5 px-3">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                             {v.history?.length || 0}

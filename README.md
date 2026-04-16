@@ -21,7 +21,7 @@ Ensure you have the following installed on your system:
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/abdurrahmanshkh/blockchain-vehicle-management-system
-cd VehicleLifecycleSystem
+cd blockchain-vehicle-management-system
 ```
 
 ### 2. Start the Blockchain Network

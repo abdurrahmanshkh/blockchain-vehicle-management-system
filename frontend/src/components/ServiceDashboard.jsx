@@ -103,8 +103,8 @@ function ServiceDashboard({ contract, loading, setLoading, user, addToast }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Add Service Record Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-emerald-50/50">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 bg-emerald-50/50 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -169,8 +169,8 @@ function ServiceDashboard({ contract, loading, setLoading, user, addToast }) {
         </div>
 
         {/* Info Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50/50">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50/50 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -115,8 +115,8 @@ function RTODashboard({ contract, loading, setLoading, user, addToast }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Authorize Service Center Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-amber-50/50">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 bg-amber-50/50 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -149,8 +149,8 @@ function RTODashboard({ contract, loading, setLoading, user, addToast }) {
         </div>
 
         {/* Register Vehicle Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50/50">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50/50 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -207,8 +207,8 @@ function RTODashboard({ contract, loading, setLoading, user, addToast }) {
         </div>
 
         {/* Registered Vehicles Table — full width */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 rounded-t-2xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">

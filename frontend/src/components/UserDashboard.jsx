@@ -88,8 +88,8 @@ function UserDashboard({ contract, loading, setLoading, user, addToast }) {
       </div>
 
       {/* My Vehicles — full width at top */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100 bg-violet-50/50">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6">
+        <div className="px-6 py-4 border-b border-gray-100 bg-violet-50/50 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
@@ -144,8 +144,8 @@ function UserDashboard({ contract, loading, setLoading, user, addToast }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Transfer Ownership Card */}
-        <div id="transfer-form" className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-violet-50/50">
+        <div id="transfer-form" className="bg-white rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 bg-violet-50/50 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -215,8 +215,8 @@ function UserDashboard({ contract, loading, setLoading, user, addToast }) {
         </div>
 
         {/* Quick Guide Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50/50">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50/50 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -29,9 +29,9 @@ function PublicSearch({ addToast }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 rounded-t-2xl">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

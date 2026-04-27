@@ -1,0 +1,19 @@
+# Node & Web3
+node_modules/
+blockchain/artifacts/
+blockchain/cache/
+blockchain/typechain-types/
+frontend/dist/
+
+# Python & Backend
+__pycache__/
+venv/
+*.pyc
+.pytest_cache/
+
+# Environment Variables (CRITICAL!)
+.env
+
+# OS Files
+.DS_Store
+Thumbs.db
